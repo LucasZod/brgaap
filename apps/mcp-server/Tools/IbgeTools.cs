@@ -8,14 +8,14 @@ namespace McpServer.Tools;
 public static class IbgeTools
 {
     [McpServerTool]
-    [Description("Retorna a lista de todos os estados brasileiros com código IBGE, sigla e nome.")]
+    [Description("Retorna TODOS os estados brasileiros (UF) com código IBGE, sigla, nome e região. Use para qualquer pergunta sobre um ou mais estados — incluindo a sigla, o código IBGE, o nome ou a região de um estado específico como Goiás, São Paulo ou Bahia.")]
     public static Task<string> GetStates(
         IIbgeService ibgeService,
         CancellationToken cancellationToken) =>
         ibgeService.GetStatesAsync(cancellationToken);
 
     [McpServerTool]
-    [Description("Retorna a lista de municípios de um estado brasileiro. Requer a sigla do estado (UF).")]
+    [Description("Retorna a lista de cidades (municípios) de UM estado. Use somente quando o usuário pedir as cidades ou municípios de um estado. NÃO use para obter a sigla, o código IBGE ou dados do próprio estado — para isso use a ferramenta de estados.")]
     public static Task<string> GetMunicipalities(
         IIbgeService ibgeService,
         [Description("Sigla do estado (UF), ex: GO, SP, RJ.")] string uf,

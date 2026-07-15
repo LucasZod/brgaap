@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -23,14 +24,40 @@ public class CnpjService(HttpClient httpClient) : ICnpjService
 
     private async Task<string> RequestAsync(string cnpj, CancellationToken cancellationToken)
     {
-        using var response = await httpClient.GetAsync($"{BASE_URL}{cnpj}", cancellationToken);
+        using var response = await GetWithRetryAsync(cnpj, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return $"CNPJ {cnpj} não encontrado ou indisponível (HTTP {(int)response.StatusCode}).";
+            return DescribeError(cnpj, response.StatusCode);
         }
 
         var company = await response.Content.ReadFromJsonAsync<BrasilApiCnpj>(cancellationToken);
         return company is null ? $"CNPJ {cnpj} sem dados retornados." : Serialize(company);
+    }
+
+    private async Task<HttpResponseMessage> GetWithRetryAsync(string cnpj, CancellationToken cancellationToken)
+    {
+        var response = await httpClient.GetAsync($"{BASE_URL}{cnpj}", cancellationToken);
+        if (response.StatusCode != HttpStatusCode.TooManyRequests)
+        {
+            return response;
+        }
+
+        response.Dispose();
+        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+        return await httpClient.GetAsync($"{BASE_URL}{cnpj}", cancellationToken);
+    }
+
+    private static string DescribeError(string cnpj, HttpStatusCode status)
+    {
+        if (status == HttpStatusCode.TooManyRequests)
+        {
+            return $"Limite de consultas da BrasilAPI atingido (HTTP 429) para o CNPJ {cnpj}. Aguarde alguns segundos e tente novamente.";
+        }
+        if (status == HttpStatusCode.NotFound)
+        {
+            return $"CNPJ {cnpj} não encontrado na base da BrasilAPI.";
+        }
+        return $"CNPJ {cnpj} indisponível no momento (HTTP {(int)status}).";
     }
 
     private static string Serialize(BrasilApiCnpj company)
