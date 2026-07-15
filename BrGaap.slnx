@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/apps/">
+    <Project Path="apps/chat-api/chat-api.csproj" />
+    <Project Path="apps/mcp-server/mcp-server.csproj" />
+  </Folder>
+</Solution>
