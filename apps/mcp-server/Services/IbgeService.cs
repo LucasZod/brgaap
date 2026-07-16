@@ -64,7 +64,7 @@ public class IbgeService(HttpClient httpClient) : IIbgeService
         [property: JsonPropertyName("nome")] string Nome,
         [property: JsonPropertyName("regiao")] IbgeRegion? Regiao)
     {
-        public StateResult ToResult() => new(Id, Sigla, Nome, Regiao?.Nome ?? "");
+        public StateResult ToResult() => new(Id, Codigo: Id, Sigla, Nome, Regiao?.Nome ?? "");
     }
 
     private record IbgeRegion([property: JsonPropertyName("nome")] string Nome);

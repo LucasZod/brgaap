@@ -14,9 +14,13 @@ public class ChatService(
         "Você tem acesso a ferramentas para consultar CNPJs de empresas, " +
         "estados e municípios brasileiros via IBGE, e a data/hora do servidor. " +
         "Use as ferramentas sempre que o usuário pedir dados que elas podem fornecer. " +
+        "Nem toda mensagem exige uma ferramenta: se o usuário apenas conversar, se apresentar " +
+        "ou fizer uma pergunta geral (inclusive sobre você mesmo), responda de forma " +
+        "conversacional e natural, sem chamar nenhuma ferramenta. " +
         "Ao receber o resultado de uma ferramenta, apresente os dados reais ao usuário " +
         "de forma clara e organizada: quando houver vários itens, liste-os em bullets. " +
         "Nunca responda apenas que 'a resposta é uma lista' sem mostrar os itens. " +
+        "Responda sempre à mensagem atual do usuário e nunca repita uma resposta anterior. " +
         "Responda sempre em português brasileiro.";
 
     public async IAsyncEnumerable<string> StreamAsync(

@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,7 +7,11 @@ namespace McpServer.Services;
 
 public class CnpjService(HttpClient httpClient) : ICnpjService
 {
-    private const string BASE_URL = "https://brasilapi.com.br/api/cnpj/v1/";
+    private static readonly string[] SOURCES =
+    [
+        "https://brasilapi.com.br/api/cnpj/v1/",
+        "https://minhareceita.org/",
+    ];
 
     public async Task<string> FetchAsync(string cnpj, CancellationToken cancellationToken)
     {
@@ -24,43 +27,41 @@ public class CnpjService(HttpClient httpClient) : ICnpjService
 
     private async Task<string> RequestAsync(string cnpj, CancellationToken cancellationToken)
     {
-        using var response = await GetWithRetryAsync(cnpj, cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        var company = await FetchFromSourcesAsync(cnpj, cancellationToken);
+        if (company is null)
         {
-            return DescribeError(cnpj, response.StatusCode);
+            return $"Não foi possível obter os dados do CNPJ {cnpj} agora. Os serviços de consulta podem estar indisponíveis ou o CNPJ não existe. Tente novamente em instantes.";
         }
 
-        var company = await response.Content.ReadFromJsonAsync<BrasilApiCnpj>(cancellationToken);
-        return company is null ? $"CNPJ {cnpj} sem dados retornados." : Serialize(company);
+        return Serialize(company);
     }
 
-    private async Task<HttpResponseMessage> GetWithRetryAsync(string cnpj, CancellationToken cancellationToken)
+    private async Task<CnpjApiResponse?> FetchFromSourcesAsync(string cnpj, CancellationToken cancellationToken)
     {
-        var response = await httpClient.GetAsync($"{BASE_URL}{cnpj}", cancellationToken);
-        if (response.StatusCode != HttpStatusCode.TooManyRequests)
+        foreach (var baseUrl in SOURCES)
         {
-            return response;
+            var company = await TryFetchAsync($"{baseUrl}{cnpj}", cancellationToken);
+            if (company is not null) return company;
         }
 
-        response.Dispose();
-        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-        return await httpClient.GetAsync($"{BASE_URL}{cnpj}", cancellationToken);
+        return null;
     }
 
-    private static string DescribeError(string cnpj, HttpStatusCode status)
+    private async Task<CnpjApiResponse?> TryFetchAsync(string url, CancellationToken cancellationToken)
     {
-        if (status == HttpStatusCode.TooManyRequests)
+        try
         {
-            return $"Limite de consultas da BrasilAPI atingido (HTTP 429) para o CNPJ {cnpj}. Aguarde alguns segundos e tente novamente.";
+            using var response = await httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<CnpjApiResponse>(cancellationToken);
         }
-        if (status == HttpStatusCode.NotFound)
+        catch
         {
-            return $"CNPJ {cnpj} não encontrado na base da BrasilAPI.";
+            return null;
         }
-        return $"CNPJ {cnpj} indisponível no momento (HTTP {(int)status}).";
     }
 
-    private static string Serialize(BrasilApiCnpj company)
+    private static string Serialize(CnpjApiResponse company)
     {
         var result = new CnpjResult(
             company.RazaoSocial,
@@ -71,7 +72,7 @@ public class CnpjService(HttpClient httpClient) : ICnpjService
         return JsonSerializer.Serialize(result);
     }
 
-    private record BrasilApiCnpj(
+    private record CnpjApiResponse(
         [property: JsonPropertyName("razao_social")] string? RazaoSocial,
         [property: JsonPropertyName("descricao_situacao_cadastral")] string? SituacaoCadastral,
         [property: JsonPropertyName("cnae_fiscal_descricao")] string? AtividadePrincipal,
