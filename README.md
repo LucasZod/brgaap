@@ -26,7 +26,7 @@ Você vai precisar de:
 | ----------------- | ---------- | --------------------------------------- |
 | .NET SDK          | `10.0.302` | Fixado no [`global.json`](global.json)  |
 | Ollama            | atual      | Tem que estar rodando antes do chat-api |
-| Modelo `llama3.2` |            | Baixado no Ollama                       |
+| Modelo `qwen2.5:3b` |          | Baixado no Ollama                       |
 
 Pra conferir se está tudo no lugar:
 
@@ -44,7 +44,7 @@ Sem o Ollama no ar, o chat-api não sobe. Ele espera encontrar o serviço em `ht
 ollama serve
 
 # baixa o modelo, só precisa fazer na primeira vez
-ollama pull llama3.2
+ollama pull qwen2.5:3b
 
 # confere se baixou
 ollama list
@@ -87,7 +87,7 @@ Dá pra testar direto pelo stdin também, se preferir:
 
 Pra rodar, garanta duas coisas antes:
 
-1. Ollama no ar com o llama3.2 (o passo 0).
+1. Ollama no ar com o qwen2.5:3b (o passo 0).
 2. mcp-server já buildado (`dotnet build apps/mcp-server`).
 
 Aí é só:
@@ -120,7 +120,7 @@ A configuração fica no [`apps/chat-api/appsettings.json`](apps/chat-api/appset
 
 ```json
 {
-  "Ollama": { "Url": "http://localhost:11434", "Model": "llama3.2" },
+  "Ollama": { "Url": "http://localhost:11434", "Model": "qwen2.5:3b" },
   "Mcp": { "ServerProject": "../mcp-server" }
 }
 ```
@@ -203,11 +203,11 @@ brgaap/
 
 ## Limitações conhecidas
 
-Vale ser honesto sobre os limites da coisa, porque tem escolhas de escopo aqui que são de propósito. O projeto roda um LLM local, o llama3.2 de 3B, em CPU via Ollama. Isso cobra um preço:
+Vale ser honesto sobre os limites da coisa, porque tem escolhas de escopo aqui que são de propósito. O projeto roda um LLM local, o qwen2.5 de 3B, em CPU via Ollama. Cheguei nele depois de testar o llama3.2 de 3B, que vivia errando a tool e respondendo em inglês, e o qwen ficou bem mais confiável em decidir quando e qual ferramenta usar. Mesmo assim, rodar um 3B em CPU cobra um preço:
 
 A primeira coisa é a lentidão em lista grande. Quando uma tool devolve muito item, o modelo precisa ler o JSON inteiro antes de começar a responder, e depois vai cuspindo poucos tokens por segundo, tudo em CPU. Na prática, listar os 15 municípios de Roraima leva uns 45 segundos. A lista inteira de Goiás, com 246, passa de vários minutos. Consulta menor (CNPJ, estados, data, município de estado pequeno) responde numa boa.
 
-A segunda é a fidelidade do dado. O modelo reescreve o que a tool retornou, então em lista grande ele às vezes distorce nome, escreve "Roraimolândia" no lugar de "Rorainópolis", esse tipo de coisa. A tool devolve o dado certo. Quem erra é o modelo de 3B na hora de reproduzir a lista, não a consulta.
+A segunda é a fidelidade do dado. O modelo reescreve o que a tool retornou, então de vez em quando ele escorrega, troca um acento no nome de um município ou solta o código IBGE errado (já vi dizer 53 pro Goiás, sendo que é 52). A tool devolve o dado certo. Quem escorrega é o modelo de 3B na hora de reproduzir, não a consulta. Com o qwen isso ficou bem mais raro que era com o llama, mas ainda acontece.
 
 E a terceira é que não tem GPU e o modelo é pequeno. Não tem ajuste de código que resolva isso, a velocidade é limitada pelo hardware e pelo tamanho do modelo. Um modelo maior melhora a fidelidade, mas a velocidade continua presa na CPU.
 

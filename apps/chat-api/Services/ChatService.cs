@@ -23,16 +23,19 @@ public class ChatService(
         "Responda sempre à mensagem atual do usuário e nunca repita uma resposta anterior. " +
         "Responda sempre em português brasileiro.";
 
+    private const int MAX_CONTEXT_MESSAGES = 6;
+
     public async IAsyncEnumerable<string> StreamAsync(
         string sessionId,
         string message,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var history = PrepareHistory(sessionId, message);
+        var prompt = BuildPrompt(history);
         var options = new ChatOptions { Tools = [.. mcpClientService.Tools] };
         var answer = new StringBuilder();
 
-        await foreach (var update in chatClient.GetStreamingResponseAsync(history, options, cancellationToken))
+        await foreach (var update in chatClient.GetStreamingResponseAsync(prompt, options, cancellationToken))
         {
             if (string.IsNullOrEmpty(update.Text))
             {
@@ -56,5 +59,16 @@ public class ChatService(
 
         sessionService.Append(sessionId, new ChatMessage(ChatRole.User, message));
         return history;
+    }
+
+    private static List<ChatMessage> BuildPrompt(List<ChatMessage> history)
+    {
+        if (history.Count <= MAX_CONTEXT_MESSAGES + 1)
+        {
+            return history;
+        }
+
+        var recent = history.Skip(1).TakeLast(MAX_CONTEXT_MESSAGES);
+        return [history[0], .. recent];
     }
 }
