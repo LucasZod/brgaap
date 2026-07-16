@@ -131,7 +131,7 @@ const UserAlign = ({ children }: { children: React.ReactNode }) => (
 );
 
 const UserBubble = ({ children }: { children: React.ReactNode }) => (
-  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-user-bubble px-4 py-2.5 font-sans text-[15px] leading-relaxed text-ink">
+  <div className="max-w-[85%] w-full min-inline-fit whitespace-pre-wrap rounded-2xl rounded-br-md bg-user-bubble px-4 py-2.5 font-sans text-[15px] leading-relaxed text-ink">
     {children}
   </div>
 );
